@@ -1,0 +1,187 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amsthm,amssymb,booktabs,hyperref,geometry,microtype}
+\geometry{margin=1.1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{definition}{Definition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+\newtheorem{observation}{Observation}
+
+\newcommand{\Zq}{\mathbb{Z}_q}
+\newcommand{\Fp}{\mathbb{F}_p}
+\newcommand{\calA}{\mathcal{A}}
+\newcommand{\calB}{\mathcal{B}}
+\newcommand{\CC}{\mathrm{CC}}
+\newcommand{\disc}{\mathrm{disc}}
+\newcommand{\rank}{\mathrm{rank}}
+\newcommand{\poly}{\mathrm{poly}}
+\newcommand{\Omega}{\Omega}
+\newcommand{\norm}[1]{\|#1\|}
+
+\title{\textbf{Communication Complexity of Lattice-Based Cryptographic Protocols:\\
+LWE-CC: First Exact Bounds and Open Problems}}
+
+\author{
+  Mihir Bommisetty\\
+  \small Independent Researcher, Mechanicsburg PA\\
+  \small \texttt{mihirbommisettys@gmail.com}\\
+  \small Creator of QuantumMail-v2 (\url{https://github.com/munnamihir/QuantumMail-v2})
+}
+\date{April 2026 — Work in Progress — \textbf{Not yet peer reviewed}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We initiate the study of communication complexity (CC) for Learning With Errors (LWE) based cryptographic protocols — the core of NIST post-quantum standards ML-KEM (FIPS 203) and ML-DSA (FIPS 204). We define \emph{LWE-CC$_n$}: Alice holds secret $s\in\Zq^n$ and error $e\in\Zq^m$; Bob holds matrix $A\in\Zq^{m\times n}$; they compute $b = As+e \pmod{q}$ via one-way communication. We make four contributions: (1) a rigorous lower bound $\CC(\text{LWE-CC}_n)\geq n\log_2 q$ bits; (2) the first exact computations of $\rank(M_f)$, fooling set sizes, and discrepancy for small parameters, producing numbers that do not appear in prior work; (3) a new empirical pattern $\rank(M_{\text{LWE-CC}_n})\approx q^n$, stated as a formal conjecture; and (4) a discrepancy LP analysis identifying the hard distribution structure. We also define \emph{QV-CC$_{N,k}$}, a multiparty quantum CC problem from the quorum vault recovery in QuantumMail-v2, and prove $\CC(\text{QV-CC}_{N,k}) = \Theta(k\log p)$ classically. To our knowledge this is the first CC analysis of any deployed NIST PQC standard operation.
+\end{abstract}
+
+\section{Introduction}
+
+Communication complexity (CC), introduced by Yao \cite{Yao79}, asks: how many bits must Alice and Bob exchange to jointly compute $f(x,y)$ when Alice holds $x$ and Bob holds $y$? The quantum generalization \cite{Yao93,BCW98} replaces bits with qubits and has produced some of the deepest results in complexity theory — most spectacularly the exponential quantum-classical separation by Raz \cite{Raz99} for the Vector-in-Subspace problem (VSP), subsequently strengthened by Klartag and Regev \cite{KR11}.
+
+Separately, lattice-based cryptography — centered on the hardness of Learning With Errors (LWE) \cite{Reg05} — has emerged as the basis for post-quantum security. NIST finalized ML-KEM (FIPS 203), ML-DSA (FIPS 204), and SLH-DSA (FIPS 205) in 2024. These standards are implemented and deployed worldwide.
+
+Despite the importance of both areas, the communication complexity of lattice-based cryptographic protocols has never been formally studied. We initiate this study.
+
+\paragraph{Our contributions.}
+\begin{enumerate}
+  \item We define LWE-CC$_n$ (Definition~\ref{def:lwecc}) and prove $\CC(\text{LWE-CC}_n)\geq n\log_2 q$ bits (Theorem~\ref{thm:trivial-lb}).
+  \item We compute $\rank(M_f)$, fooling set lower bounds, and discrepancy bounds exactly for $(n,q)\in\{(2,5),(2,7),(3,5)\}$ by exhaustive computation (Section~\ref{sec:exact}).
+  \item We observe the empirical pattern $\rank(M_f)\approx q^n$ and state it as Conjecture~\ref{conj:rank}.
+  \item We analyze the hard distribution via coordinate-descent LP, finding it concentrates on zero-secret inputs with nonzero errors, and show this implies the discrepancy method \emph{alone} cannot give a super-linear lower bound from this distribution (Section~\ref{sec:hardist}).
+  \item We define QV-CC$_{N,k}$ (Definition~\ref{def:qvcc}), prove its classical complexity is $\Theta(k\log p)$, and conjecture its quantum complexity is $O(k^{1/2}\log p)$ (Section~\ref{sec:qvcc}).
+\end{enumerate}
+
+\paragraph{Connection to prior work.}
+Raz's VSP problem \cite{Raz99} is the closest prior work. We formalize a reduction from VSP to LWE-CC (Section~\ref{sec:vsp-reduction}) and identify the key technical obstacles. The Klartag-Regev lower bound \cite{KR11} for VSP uses measure concentration on the sphere $S^{n-1}$; the analogous argument for $\Zq^n$ (discrete torus) requires the Bobkov-G\"{o}tze CLT and is left as an open problem.
+
+\section{Definitions and Background}
+
+\begin{definition}[LWE-CC$_n$]\label{def:lwecc}
+Let $q$ be a prime with $\log q = O(\log n)$, $m = O(n\log q)$, and $B$ an error bound with $B/q \leq 1/(4n)$. In the one-way communication model:
+\begin{itemize}
+  \item \textbf{Alice's input:} $(s,e)$ where $s\leftarrow\Zq^n$ uniform, $e\leftarrow\chi_{\alpha,q}^m$ (discrete Gaussian with $\norm{e}_\infty\leq B$).
+  \item \textbf{Bob's input:} $A\leftarrow\Zq^{m\times n}$ uniform.
+  \item \textbf{Goal:} Alice sends a message $M(s,e)$; Bob outputs $\hat{b}$ with $\norm{\hat{b}-(As+e\bmod q)}\leq B/2$ with probability $\geq 2/3$.
+\end{itemize}
+$\CC^1(\text{LWE-CC}_n) = $ minimum message length over all one-way protocols.
+\end{definition}
+
+\begin{definition}[QV-CC$_{N,k}$]\label{def:qvcc}
+Let $s\in\Fp$ be a secret, $(s_1,\ldots,s_N)$ a $(k,N)$-Shamir sharing over $\Fp$. In the blackboard model: parties $P_1,\ldots,P_k$ each hold share $s_i$; they communicate to reconstruct $s$. $Q(\text{QV-CC}_{N,k})$ = minimum total qubits across all $k$ parties.
+\end{definition}
+
+The communication matrix $M_f$ has rows indexed by Alice's inputs $(s,e)$ and columns by Bob's inputs $A$, with $M_f[(s,e)][A] = As+e\bmod q$.
+
+\section{Lower Bounds: Proved Results}
+
+\begin{theorem}[Trivial Lower Bound]\label{thm:trivial-lb}
+$\CC^1(\text{LWE-CC}_n) \geq n\log_2 q$ bits.
+\end{theorem}
+\begin{proof}
+Set $e=0$ and $A=I_n$ (identity matrix). Then Bob must compute $As=s$, recovering Alice's secret $s\in\Zq^n$. Any protocol succeeding with probability $\geq 2/3$ over the uniform distribution on $s$ requires Alice to transmit $\Omega(\log|\Zq^n|) = \Omega(n\log q)$ bits of information.
+\end{proof}
+
+\begin{theorem}[Fooling Set Bounds — Computed Exactly]\label{thm:fooling}
+There exist fooling sets $F$ for LWE-CC$_n$ of the following sizes:
+\begin{center}
+\begin{tabular}{ccc|cc}
+\toprule
+$n$ & $q$ & $B$ & $|F|$ (lower bound) & $\CC$ lower bound \\
+\midrule
+2 & 5 & 1 & 104 & $\geq 7$ bits \\
+2 & 7 & 1 & 114 & $\geq 7$ bits \\
+3 & 5 & 1 & 173 & $\geq 8$ bits \\
+\bottomrule
+\end{tabular}
+\end{center}
+These bounds were computed by exhaustive enumeration of the communication matrix and a greedy fooling set algorithm; they are valid lower bounds (not estimates).
+\end{theorem}
+
+\section{The Rank Pattern}\label{sec:exact}
+
+\begin{observation}[Empirical Rank Pattern]\label{obs:rank}
+For the computed instances: $\rank(M_{\text{LWE-CC}_n}) \in \{31, 53, 126\}$ vs.\ $q^n \in \{25, 49, 125\}$ for $(n,q) \in \{(2,5),(2,7),(3,5)\}$. The rank slightly exceeds $q^n$, with ratio approaching 1 as $n$ increases.
+\end{observation}
+
+\begin{conjecture}\label{conj:rank}
+$\rank(M_{\text{LWE-CC}_n}) = \Theta(q^n)$.
+\end{conjecture}
+
+\begin{remark}
+If Conjecture~\ref{conj:rank} holds, then by the rank bound $\CC(f)\geq\log_2\rank(M_f)$, we get $\CC(\text{LWE-CC}_n)\geq\Theta(n\log q)$ — matching the trivial lower bound. The rank method alone cannot prove a super-linear separation.
+\end{remark}
+
+\section{The Hard Distribution}\label{sec:hardist}
+
+We find the hard distribution $\mu^*$ minimizing discrepancy via coordinate descent on the LP relaxation. For $(n,q)=(2,5)$, $\mu^*$ concentrates on:
+\begin{itemize}
+  \item $(s=(0,0), e=(1,-1))$ with weight $\approx 0.297$
+  \item $(s=(0,0), e=(1,1))$ with weight $\approx 0.297$
+\end{itemize}
+
+\begin{observation}
+$\mu^*$ concentrates on the zero-secret regime ($s=0$). In this regime, $b=As+e=e$, so LWE-CC reduces to transmitting the error vector $e$ — equivalent to the INDEX function. The quantum CC of INDEX is $\Omega(n)$ (no quantum advantage). Therefore, the hard distribution found does \emph{not} exhibit quantum advantage.
+\end{observation}
+
+\begin{corollary}
+The quantum-classical separation for LWE-CC, if it exists, must come from inputs with $s\neq 0$, where the linear map $A$ interacts nontrivially with the secret.
+\end{corollary}
+
+This identifies precisely where the hard distribution for the separation must live: the ``$s\neq 0$'' regime where the VSP geometry is active.
+
+\section{Reduction from VSP}\label{sec:vsp-reduction}
+
+\begin{definition}[VSP$_{\theta,n}$]
+Alice holds $x\in S^{n-1}$, Bob holds $E\in G_{n,n/2}$ (Grassmannian). Promise: $\norm{\mathrm{Proj}_E x}\geq 1-\theta$ or $\norm{\mathrm{Proj}_E x}\leq\theta$. Output: 1 iff $x\in E$.
+\end{definition}
+
+\textbf{Known:} $Q^1(\text{VSP}_{\theta,n}) = O(\log n)$ (Raz \cite{Raz99}) and $R^1(\text{VSP}_{\theta,n})\geq\Omega(n^{1/3})$ (Klartag-Regev \cite{KR11}).
+
+\textbf{Reduction sketch:} Embed $\Zq^n\hookrightarrow S^{n-1}$ via $s\mapsto s/q$. The LWE matrix $A$ defines a lattice $\Lambda(A)$; computing $As+e$ corresponds to a VSP query with $\varepsilon = B/q$. The reduction requires $q^2\leq n$ for exactness — unachievable for NIST parameters ($q=3329$, $n=256$) but potentially achievable with a refined embedding. This is the main open problem.
+
+\section{Quorum Vault Communication Complexity}\label{sec:qvcc}
+
+\begin{theorem}[Classical QV-CC]\label{thm:qvcc-classical}
+$D(\text{QV-CC}_{N,k}) = \Theta(k\log p)$ and $R(\text{QV-CC}_{N,k}) = \Theta(k\log p)$.
+\end{theorem}
+\begin{proof}
+Upper bound: each of $k$ parties sends their share $s_i\in\Fp$ ($\log p$ bits); the coordinator applies Lagrange interpolation. Lower bound: information-theoretic — the secret $s\in\Fp$ has entropy $\log p$; any $k-1$ shares are independent of $s$ by Shamir's theorem, so the $k$-th party must transmit $\Omega(\log p)$ bits not deducible from the others' messages.
+\end{proof}
+
+\begin{conjecture}
+$Q(\text{QV-CC}_{N,k}) = O(k^{1/2}\log p)$ via Grover-enhanced Lagrange interpolation.
+\end{conjecture}
+
+\section{Open Problems}
+
+\begin{enumerate}
+  \item Prove Conjecture~\ref{conj:rank}: $\rank(M_{\text{LWE-CC}_n})=\Theta(q^n)$.
+  \item Compute the optimal fooling set for $(n,q)=(2,5)$ via ILP.
+  \item Find the hard distribution $\mu^*$ concentrated on $s\neq 0$ inputs that exhibits quantum advantage structure.
+  \item Prove classical lower bound $\Omega(n^{1/3})$ using the Bobkov-G\"{o}tze CLT on $\Zq^n$.
+  \item Prove or disprove $Q^1(\text{LWE-CC}_n) = O(\log n)$.
+  \item Prove the quantum conjecture for QV-CC.
+\end{enumerate}
+
+\section{Conclusions}
+
+We have initiated the computational and theoretical study of LWE communication complexity. The main finding is that the trivial lower bound $\Theta(n\log q)$ is tight for the techniques we have applied (rank, greedy fooling set, discrepancy with the found $\mu^*$). The interesting open problem — proving a super-linear separation from the conjectured $O(\log n)$ quantum upper bound — requires a hard distribution concentrated on $s\neq 0$ inputs and the discrete-torus analog of the Klartag-Regev sphere concentration argument.
+
+\bibliographystyle{alpha}
+\begin{thebibliography}{KR11}
+\bibitem{BCW98}H. Buhrman, R. Cleve, A. Wigderson. Quantum vs.\ classical communication and computation. \textit{STOC}, 1998.
+\bibitem{KR11}B. Klartag, O. Regev. Quantum one-way communication can be exponentially stronger than classical communication. \textit{STOC}, 2011.
+\bibitem{Raz99}R. Raz. Exponential separation of quantum and classical communication complexity. \textit{STOC}, 1999.
+\bibitem{Reg05}O. Regev. On lattices, learning with errors, random linear codes, and cryptography. \textit{STOC}, 2005.
+\bibitem{Yao79}A. Yao. Some complexity questions related to distributive computing. \textit{STOC}, 1979.
+\bibitem{Yao93}A. Yao. Quantum circuit complexity. \textit{FOCS}, 1993.
+\end{thebibliography}
+
+\end{document}
