@@ -4,6 +4,14 @@
 **Started:** April 15, 2026  
 **Status:** Active research — work in progress
 
+## Paper
+**"Communication Complexity of the LWE Function: First Exact Bounds 
+and the Hard Distribution Structure"**  
+Mihir Bommisetty, April 2026  
+**DOI:** https://doi.org/10.5281/zenodo.19609632 
+**Status:** Zenodo published
+
+
 ## What This Is
 
 This repository contains the **first computational study of the communication complexity of the Learning With Errors (LWE) function** — the mathematical core of NIST post-quantum cryptographic standards ML-KEM (FIPS 203) and ML-DSA (FIPS 204).
