@@ -1,0 +1,53 @@
+[
+  {
+    "n": 2,
+    "q": 5,
+    "B": 1,
+    "m": 2,
+    "num_alice": 125,
+    "num_bob": 200,
+    "rank": 31,
+    "rank_lb": 5,
+    "fooling_set_size": 104,
+    "fooling_lb": 7,
+    "discrepancy": 0.04078082665409398,
+    "disc_lb": 5,
+    "classical_lb": 7,
+    "quantum_ub": 2,
+    "ratio": 3.5
+  },
+  {
+    "n": 2,
+    "q": 7,
+    "B": 1,
+    "m": 2,
+    "num_alice": 245,
+    "num_bob": 200,
+    "rank": 53,
+    "rank_lb": 6,
+    "fooling_set_size": 114,
+    "fooling_lb": 7,
+    "discrepancy": 0.044232713515253964,
+    "disc_lb": 5,
+    "classical_lb": 7,
+    "quantum_ub": 2,
+    "ratio": 3.5
+  },
+  {
+    "n": 3,
+    "q": 5,
+    "B": 1,
+    "m": 3,
+    "num_alice": 625,
+    "num_bob": 200,
+    "rank": 126,
+    "rank_lb": 7,
+    "fooling_set_size": 173,
+    "fooling_lb": 8,
+    "discrepancy": 0.11243917375763134,
+    "disc_lb": 4,
+    "classical_lb": 8,
+    "quantum_ub": 3,
+    "ratio": 2.6666666666666665
+  }
+]
